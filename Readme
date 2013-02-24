@@ -1,0 +1,27 @@
+Distributed under the terms of the GNU General Public License v2
+
+This is porject for external control Chery Tiggo audio headunit via android devices.
+
+Current Project use Teensy 2.0 as mcu. It controls:
+* audio mux, based on TDA7342 (sound input-output, volume level, freq filters)
+* audio amplyfier, based on TDA7385
+* fm-radio control, based on TEF6606T(or TEA5767)
+* android frontend sleep-resume at acc event (for my project its kindle fire rev1)
+* external (at street) and internal(in car) temperature monitor and display it on android frontend
+
+All other features (android specific):
+* gps
+* 3G
+* all audio and video media formats
+* OBDII car diagnostic
+* rear view camera (with easycap dongle)
+* all what u want
+
+Main thing of this project is low cost and minimum external wires: all basic functions realised with default chery in-dash headunit and android tablet and teensy heart.
+
+
+Teensy code based on s.m. project: http://pccar.ru/showthread.php?t=18328
+
+
+Current project blog: http://pccar.ru/showthread.php?t=18442
+
