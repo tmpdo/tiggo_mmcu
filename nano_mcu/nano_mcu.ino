@@ -7,10 +7,12 @@
 int trig; //power trigger current state
 int prev_trig = 0; //power trigger previous state
 
-#define ONE_WIRE_BUS 15
-#define accPin 2 //D2
-#define ledPin 13 
-#define relayPin 3 //D3 output to power button
+#define relayPin 2 //D2, output to power button
+#define ONE_WIRE_BUS 3 //D3, input for dallas sensor
+#define sboardPin 4 //D4, power on sound board
+#define ledPin 13 //D13
+#define accPin 14 //A0
+
 
 #define TDA7318_I2C_ADDRESS 0x44
 #define TDA_SW1 0x3A
@@ -18,8 +20,8 @@ int prev_trig = 0; //power trigger previous state
 #define TDA_SW3 0x20
 #define TDA_SW4 0x3B
 #define TDA_SUB_INPUT 0x0
-//#define TDA_SUB_VOL0 0x11
-//#define TDA_SUB_VOL1 0x10
+#define TDA_SUB_VOL0 0x11
+#define TDA_SUB_VOL1 0x10
 #define TDA_SUB_VOL 0x2
 #define TDA_SUB_BASS_TREBLE 0x3
 #define TDA_SUB_ATT_LF 0x4
@@ -27,7 +29,7 @@ int prev_trig = 0; //power trigger previous state
 #define TDA_SUB_ATT_RF 0x6
 #define TDA_SUB_ATT_RR 0x7
 #define TDA_SUB_MUTE 0x8
-#define TDA_SOFT_MUTE 0x8
+#define TDA_UNMUTE 0x0
 
 #define RADIO_I2C_ADDRESS 0x60
 #define RADIO_I2C_SUB_ADDRESS 0x20
@@ -80,19 +82,18 @@ DallasTemperature sensors(&oneWire);
 MeetAndroid meetAndroid;
 
 void setup() {
- 
+
   Serial.begin(38400); 
   
-  Serial.flush();
   setCallbacks();
   initTempSensors();
   initTda();
   
   pinMode(ledPin, OUTPUT); 
   pinMode(relayPin, OUTPUT); 
-  pinMode(accPin, INPUT); //acc +5v input for power button trigger
-  //pinMode(AUDIO_ON, OUTPUT);
- // pinMode(AUDIO_MUTE, OUTPUT);
+  pinMode(sboardPin, OUTPUT);
+  pinMode(accPin, INPUT_PULLUP); //acc +5v input for power button trigger
+
 
 digitalWrite(ledPin, HIGH); 
     delay(500);  
@@ -101,8 +102,6 @@ digitalWrite(ledPin, HIGH);
     digitalWrite(ledPin, HIGH); 
     delay(500);  
     digitalWrite(ledPin, LOW);
-
-Serial.println("Ready");
    
 }
 
@@ -115,10 +114,15 @@ trig = digitalRead(accPin);
     Serial.print(trig);
    digitalWrite(relayPin, LOW);
    delay(500); // waits for 0,5 seconds for short press
-  digitalWrite(relayPin, HIGH);
-    prev_trig = trig;
+   digitalWrite(relayPin, HIGH);
+      prev_trig = trig;
   }
+  if (accPin == 1 )
+   digitalWrite(sboardPin, HIGH);
+   else  
+   digitalWrite(sboardPin, LOW);
 }
+
 void setCallbacks() {
  
   meetAndroid.registerFunction(getInternalTemperature, 'A'); //Internal temperature: 1
@@ -143,20 +147,18 @@ void initTempSensors() {
 }
 
 void initTda() {
-//sendAudioMute(0);
-//sendAudioOn(1);
-//  delay(3000);
   Wire.begin(); // join i2c bus (address optional for master)
-//  sendAudioMute(1);
+  sendAudioMute;
+  sendAudioSwitch(3);
   sendAudioVolume(7);
   sendAudioLFAttenuator(15);
   sendAudioRFAttenuator(15);
   sendAudioLRAttenuator(15);
   sendAudioRRAttenuator(15);
-  sendAudioSwitch(3);  
   sendAudioBass(7);
   sendAudioTreble(7);
-//  sendAudioMute(0);
+  
+Serial.println("Send data to tda ok");
 
 }
 
@@ -169,26 +171,11 @@ void writeI2c(byte address, byte subaddress, byte value) {
   Wire.endTransmission();
  }
 
-void writeI2c_vol(byte address, byte subaddress0, byte subaddress1, byte value) {
-
-  Wire.beginTransmission(address); 
-  Wire.write(subaddress0);
-  Wire.write(subaddress1);
-  Wire.write(value);
-  Wire.endTransmission();
-}
 
 void sendAudioMute(byte value) {
-  writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_MUTE, TDA_SOFT_MUTE);
+  writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_MUTE, TDA_UNMUTE);
 }
 
-//void sendAudioVolume(byte value) {
-//  if (value > 31) return;
-//  currentVolume = value;
-//  writeI2c_vol(TDA7318_I2C_ADDRESS, TDA_SUB_VOL0, TDA_SUB_VOL1, volMap[value]);
-//  Serial.println(value);
-//  
-//} 
 
 void sendAudioVolume(byte value) {
   if (value > 31) return;
@@ -231,18 +218,19 @@ void sendAudioTreble(byte value) {
 
 void sendAudioSwitch(byte value) {
   switch (value) {
-    case 1:
+    case 1: //differential cdc, tda input 3
       writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_INPUT, TDA_SW3);   
-      break;
-    case 2:
+      break; 
+    case 2: //radio, tda input 1
       writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_INPUT, TDA_SW1);   
       break;
-    case 3:
+    case 3: //line-in, tda input 2
       writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_INPUT, TDA_SW2);   
       break;
     case 4:
       writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_INPUT, TDA_SW4);   
       break; 
+Serial.println(value);
   }  
 } 
 
