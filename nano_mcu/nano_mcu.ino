@@ -20,8 +20,6 @@ int prev_trig = 0; //power trigger previous state
 #define TDA_SW3 0x38
 #define TDA_SW4 0x3B
 #define TDA_SUB_INPUT 0x10
-#define TDA_SUB_VOL0 0x11
-#define TDA_SUB_VOL1 0x10
 #define TDA_SUB_VOL 0x12
 #define TDA_SUB_BASS_TREBLE 0x13
 #define TDA_SUB_ATT_LF 0x14
@@ -41,6 +39,7 @@ int prev_trig = 0; //power trigger previous state
 
 #define RADIO_SOURCE 2 //tda's input channel 1
 #define MUSIC_SOURCE 3 //tda's input channel 2
+#define BLUETOOTH_SOURCE 4 //tda's input channel 4(mono)
 
 DeviceAddress intTempSensor = { 0x28, 0x44, 0x0A, 0xD8, 0x02, 0x00, 0x00, 0x58 }; 
 DeviceAddress extTempSensor = { 0x28, 0xA8, 0xE4, 0x7D, 0x02, 0x00, 0x00, 0x5C };
@@ -112,21 +111,10 @@ digitalWrite(ledPin, HIGH);
 
 void loop() {
   meetAndroid.receive();
+  checkACC();
 
-//trig = digitalRead(accPin);
-//  if (prev_trig != trig ) {
-//    Serial.println("Acc state now: ");
-//    Serial.print(trig);
-//   digitalWrite(relayPin, LOW);
-//   delay(500); // waits for 0,5 seconds for short press
-//   digitalWrite(relayPin, HIGH);
-//      prev_trig = trig;
-//  }
-//  if (trig !=0) 
-//   digitalWrite(sboardPin, HIGH);
-//  else  
-//   digitalWrite(sboardPin, LOW); 
 }
+
 
 void setCallbacks() {
  
@@ -136,13 +124,36 @@ void setCallbacks() {
   meetAndroid.registerFunction(setAudioBass, 'J'); //Audio bass: 0-14
   meetAndroid.registerFunction(setAudioTreble, 'K'); //Audio treble: 0-14
   meetAndroid.registerFunction(setAudioRearLeftVolume, 'L'); //Audio rear left volume: 0-15
-//  meetAndroid.registerFunction(setAudioMute, 'M'); //Audio mute: 1-ON, 0-OFF
+  meetAndroid.registerFunction(setAudioMute, 'M'); //Audio mute: 1-ON, 0-OFF
   meetAndroid.registerFunction(setRadioFrequency, 'R'); //Radio frequency: (880-1080)-ON, 0-OFF
   meetAndroid.registerFunction(setAudioSource, 'S'); //Audio source: 2-radio, 3-music   
   meetAndroid.registerFunction(setAudioVolume, 'V'); //Audio volume: 0-31
   meetAndroid.registerFunction(setAudioRearRightVolume, 'X'); //Audio rear right volume: 0-15
  
 } 
+
+void checkACC() {
+  trig = digitalRead(accPin);
+  if (prev_trig != trig ) {
+    Serial.println("Acc state now: ");
+    Serial.print(trig);
+   digitalWrite(relayPin, LOW);
+   delay(500); // waits for 0,5 seconds for short press
+   digitalWrite(relayPin, HIGH);
+   
+      prev_trig = trig;
+  
+  if (trig !=0) {
+   digitalWrite(sboardPin, HIGH);
+   initTda();
+ 
+ }
+  else  {
+    sendAudioMute(0);
+    digitalWrite(sboardPin, LOW); 
+     }
+  }   
+}
 
 void initTempSensors() {
   sensors.begin();
@@ -154,6 +165,7 @@ void initTempSensors() {
 void initTda() {
 delay (3000);
   Wire.begin(); // join i2c bus (address optional for master)
+  sendAudioMute(1);
   sendAudioSwitch(3);
   sendAudioVolume(22);
   sendAudioLFAttenuator(15);
@@ -162,7 +174,7 @@ delay (3000);
   sendAudioRRAttenuator(15);
   sendAudioBass(7);
   sendAudioTreble(7);
-  
+  sendAudioMute(0); 
   writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_MUTE, TDA_UNMUTE);
 
 Serial.println("Send data to tda ok");
@@ -183,10 +195,11 @@ void writeI2c(byte address, byte subaddress, byte value) {
  }
 
 
-//void sendAudioMute(byte value) {
-//  writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_MUTE, TDA_UNMUTE);
-//  Serial.println(value);
-//}
+void sendAudioMute(byte value) {
+  writeI2c(TDA7318_I2C_ADDRESS, TDA_SUB_MUTE, value == 1 ? TDA_UNMUTE : TDA_SOFT_MUTE);
+  Serial.print("Mute state: ");
+  Serial.println(value);
+}
 
 
 void sendAudioVolume(byte value) {
@@ -319,9 +332,9 @@ void setAudioRearLeftVolume(byte flag, byte numOfValues) {
   sendAudioLRAttenuator(meetAndroid.getInt());
 }
 
-//void setAudioMute(byte flag, byte numOfValues) {
-//  sendAudioMute(meetAndroid.getInt());
-//}
+void setAudioMute(byte flag, byte numOfValues) {
+  sendAudioMute(meetAndroid.getInt());
+}
 
 void setRadioFrequency(byte flag, byte numOfValues) {
   double frequency = meetAndroid.getInt();
