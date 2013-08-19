@@ -7,8 +7,8 @@
 int trig; //power trigger current state
 int prev_trig = 0; //power trigger previous state
 
-#define relayPin 3 //D3, output to power button
-#define ONE_WIRE_BUS 4 //D4, input for dallas sensor
+#define relayPin 4 //D4, output to power button
+#define ONE_WIRE_BUS 3 //D3, input for dallas sensor
 #define sboardPin 5 //D5, power on sound board
 #define ledPin 13 //D13
 #define accPin 14 //A0
@@ -60,7 +60,7 @@ byte volMap[] = {0xFF,0xD8,0xD0,0xC8,0xC0,0xBC,0xB8,0xB0,0xAC,
 byte lfAttMap[] = {0x1E,0x1C,0x1A,0x18,0x16,0x14,0x12,0x10,
                    0xE,0xC,0xA,0x8,0x6,0x4,0x2,0x0};                          
 
-byte rfAttMap[] =  {0x1E,0x1C,0x1A,0x18,0x16,0x14,0x12,0x10,
+byte rfAttMap[] = {0x1E,0x1C,0x1A,0x18,0x16,0x14,0x12,0x10,
                    0xE,0xC,0xA,0x8,0x6,0x4,0x2,0x0};
 
 byte lrAttMap[] = {0x1E,0x1C,0x1A,0x18,0x16,0x14,0x12,0x10,
@@ -84,9 +84,9 @@ MeetAndroid meetAndroid;
 
 void setup() {
 
-  Serial.begin(38400); 
+  Serial.begin(9600); 
   
-  digitalWrite(sboardPin, HIGH);
+  //digitalWrite(sboardPin, HIGH);
   
   setCallbacks();
   initTempSensors();
@@ -97,16 +97,7 @@ void setup() {
   pinMode(relayPin, OUTPUT); 
   pinMode(sboardPin, OUTPUT);
   pinMode(accPin, INPUT); //acc +5v input for power button trigger
-
-
-digitalWrite(ledPin, HIGH); 
-    delay(500);  
-    digitalWrite(ledPin, LOW); 
-    delay(500);
-    digitalWrite(ledPin, HIGH); 
-    delay(500);  
-    digitalWrite(ledPin, LOW);
-   
+ 
 }
 
 void loop() {
@@ -137,9 +128,9 @@ void checkACC() {
   if (prev_trig != trig ) {
     Serial.println("Acc state now: ");
     Serial.print(trig);
-   digitalWrite(relayPin, LOW);
-   delay(500); // waits for 0,5 seconds for short press
    digitalWrite(relayPin, HIGH);
+   delay(500); // waits for 0,5 seconds for short press
+   digitalWrite(relayPin, LOW);
    
       prev_trig = trig;
   
@@ -163,11 +154,12 @@ void initTempSensors() {
 }
 
 void initTda() {
-delay (3000);
+delay (1000);
+ 
   Wire.begin(); // join i2c bus (address optional for master)
   sendAudioMute(1);
   sendAudioSwitch(3);
-  sendAudioVolume(22);
+  sendAudioVolume(17);
   sendAudioLFAttenuator(15);
   sendAudioRFAttenuator(15);
   sendAudioLRAttenuator(15);
@@ -187,11 +179,12 @@ void writeI2c(byte address, byte subaddress, byte value) {
   Wire.beginTransmission(address); 
   Wire.write(subaddress);
   Wire.write(value);
+  delay (100);
   Wire.endTransmission();
-  Serial.print("i2c subaddr:");
-  Serial.println(subaddress, HEX);
- Serial.print("i2c value:");
-  Serial.println(value, HEX);
+//  Serial.print("i2c subaddr:");
+//  Serial.println(subaddress, HEX);
+// Serial.print("i2c value:");
+//  Serial.println(value, HEX);
  }
 
 
@@ -332,6 +325,10 @@ void setAudioRearLeftVolume(byte flag, byte numOfValues) {
   sendAudioLRAttenuator(meetAndroid.getInt());
 }
 
+void setAudioRearRightVolume(byte flag, byte numOfValues) {
+  sendAudioRRAttenuator(meetAndroid.getInt());
+}
+
 void setAudioMute(byte flag, byte numOfValues) {
   sendAudioMute(meetAndroid.getInt());
 }
@@ -357,7 +354,4 @@ void setAudioVolume(byte flag, byte numOfValues) {
   
 }
 
-void setAudioRearRightVolume(byte flag, byte numOfValues) {
-  sendAudioRRAttenuator(meetAndroid.getInt());
-}
 
